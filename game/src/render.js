@@ -125,11 +125,11 @@ function drawRoadMarks(ctx, tx, ty, x, y) {
 // ---------------- props / buildings ----------------
 const inView = (x, y, m = 120) => x > view.x0 - m && x < view.x1 + m && y > view.y0 - m && y < view.y1 + m;
 
-function drawShadows(ctx) {
-  ctx.fillStyle = 'rgba(20,30,60,0.28)';
+function drawShadows(ctx, night) {
+  ctx.fillStyle = `rgba(20,25,60,${0.38 * (1 - night * 0.8)})`;
   for (const b of city.buildings) {
     if (!inView(b.x + b.w / 2, b.y + b.h / 2, b.w + 300)) continue;
-    const dx = b.height * 0.45, dy = b.height * 0.3;
+    const dx = b.height * 0.6, dy = b.height * 0.38;
     ctx.beginPath();
     ctx.moveTo(b.x, b.y); ctx.lineTo(b.x + b.w, b.y); ctx.lineTo(b.x + b.w + dx, b.y + dy);
     ctx.lineTo(b.x + b.w + dx, b.y + b.h + dy); ctx.lineTo(b.x + dx, b.y + b.h + dy); ctx.lineTo(b.x, b.y + b.h);
@@ -170,12 +170,23 @@ function drawBuilding(ctx, b, night) {
       }
     }
     ctx.stroke();
+    if (night > 0.4 && b.kind !== 'container' && b.kind !== 'house') { // lit windows
+      ctx.fillStyle = `rgba(255,220,130,${0.5 + night * 0.4})`;
+      const cols = Math.max(2, Math.round(Math.hypot(a1[0] - a0[0], a1[1] - a0[1]) / 12));
+      for (let f = 0; f < floors; f++) for (let s2 = 0; s2 < cols; s2++) {
+        if (((f * 7 + s2 * 13 + Math.floor(b.x)) % 5) > 1) continue;
+        const t = (f + 0.5) / floors, u = (s2 + 0.5) / cols;
+        const px = lerp(lerp(a0[0], a1[0], u), lerp(r0[0], r1[0], u), t), py = lerp(lerp(a0[1], a1[1], u), lerp(r0[1], r1[1], u), t);
+        ctx.fillRect(px - 2, py - 1.5, 4, 3);
+      }
+    }
   }
   // roof
   const rc = b.roof || shade(b.color, 1.06);
   ctx.fillStyle = rc;
   ctx.beginPath(); roof.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.fill();
   ctx.strokeStyle = shade(b.roof || b.color, 0.7); ctx.lineWidth = 2.5; ctx.stroke();
+  if (night > 0.35 && b.neon) { ctx.strokeStyle = b.neon; ctx.lineWidth = 3; ctx.shadowColor = b.neon; ctx.shadowBlur = 14; ctx.stroke(); ctx.shadowBlur = 0; }
   const [rx, ry] = roof[0], rw = roof[1][0] - rx, rh = roof[3][1] - ry;
   if (b.kind === 'house') { // hip roof ridge
     ctx.strokeStyle = shade(b.roof, 0.8); ctx.lineWidth = 1.5; ctx.beginPath();
@@ -189,6 +200,7 @@ function drawBuilding(ctx, b, night) {
     const dx = rx + rw * (d.x ?? 0.5), dy = ry + rh * (d.y ?? 0.5);
     if (d.t === 'ac') { ctx.fillStyle = '#c9ccd1'; ctx.fillRect(dx - 6, dy - 5, 12, 10); ctx.fillStyle = '#8a8f96'; ctx.beginPath(); ctx.arc(dx, dy, 3.5, 0, 6.28); ctx.fill(); }
     else if (d.t === 'tank') { ctx.fillStyle = '#9b7653'; ctx.beginPath(); ctx.arc(dx, dy, 7, 0, 6.28); ctx.fill(); ctx.strokeStyle = '#6e5238'; ctx.lineWidth = 1.5; ctx.stroke(); }
+    else if (d.t === 'garden') { ctx.fillStyle = '#5aa64a'; ctx.beginPath(); ctx.roundRect(dx - rw * 0.2, dy - rh * 0.2, rw * 0.4, rh * 0.4, 6); ctx.fill(); ctx.fillStyle = '#3f8a3a'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(dx - rw * 0.1 + k * rw * 0.1, dy, 5, 0, 6.28); ctx.fill(); } }
     else if (d.t === 'pool') { ctx.fillStyle = '#4fd8ee'; ctx.fillRect(dx - rw * 0.15, dy - rh * 0.12, rw * 0.3, rh * 0.24); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(dx - rw * 0.15, dy - rh * 0.12, rw * 0.3, rh * 0.24); }
     else if (d.t === 'heli') {
       const hx = rx + rw / 2, hy = ry + rh / 2, r = Math.min(rw, rh) * 0.28;
@@ -248,10 +260,11 @@ function rrect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, 
 function drawCar(ctx, c, night) {
   const L = c.len, Wd = c.wid;
   ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.a);
-  ctx.fillStyle = 'rgba(10,20,40,0.35)'; rrect(ctx, -L / 2 + 3, -Wd / 2 + 4, L, Wd, 6); ctx.fill();
+  ctx.fillStyle = 'rgba(10,20,40,0.42)'; rrect(ctx, -L / 2 + 5, -Wd / 2 + 6, L, Wd, 6); ctx.fill();
   const body = c.dead ? '#2a2a2a' : c.color;
   ctx.fillStyle = body; rrect(ctx, -L / 2, -Wd / 2, L, Wd, c.type === 'van' || c.type === 'armored' ? 3 : 6); ctx.fill();
   ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1; ctx.stroke();
+  if (c.driver === G.player) { ctx.strokeStyle = 'rgba(255,210,63,0.95)'; ctx.lineWidth = 2.5; rrect(ctx, -L / 2 - 3, -Wd / 2 - 3, L + 6, Wd + 6, 8); ctx.stroke(); }
   if (c.type === 'police' && !c.dead) { ctx.fillStyle = '#f4f4f4'; ctx.fillRect(-L * 0.12, -Wd / 2, L * 0.3, Wd); }
   if (c.type === 'van' || c.type === 'armored') {
     ctx.fillStyle = c.dead ? '#333' : shade(c.color.startsWith('#') ? c.color : '#888888', 1.12); ctx.fillRect(-L / 2 + 2, -Wd / 2 + 2, L * 0.68, Wd - 4);
@@ -321,6 +334,7 @@ function drawMarkers(ctx, markers) {
   for (const m of markers) {
     if (!inView(m.x, m.y)) continue;
     const pulse = 0.5 + 0.5 * Math.sin(G.t * 4);
+    if (m.ent) { ctx.strokeStyle = m.c; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(m.x, m.y, 12 + pulse * 2, 0, 6.28); ctx.stroke(); continue; }
     ctx.globalAlpha = 0.35 + pulse * 0.25; ctx.fillStyle = m.c;
     ctx.beginPath(); ctx.arc(m.x, m.y, m.svc ? 18 : 24, 0, 6.28); ctx.fill();
     ctx.globalAlpha = 1; ctx.strokeStyle = m.c; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(m.x, m.y, (m.svc ? 18 : 24) + pulse * 4, 0, 6.28); ctx.stroke();
@@ -329,7 +343,7 @@ function drawMarkers(ctx, markers) {
 function drawMarkerArrows(ctx, markers) {
   for (const m of markers) {
     if (!inView(m.x, m.y) || m.svc) continue;
-    const [ax, ay] = proj(m.x, m.y, 60 + Math.sin(G.t * 3) * 8);
+    const [ax, ay] = proj(m.x, m.y, (m.ent ? 30 : 60) + Math.sin(G.t * 3) * 8);
     ctx.fillStyle = m.c; ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(ax - 10, ay - 14); ctx.lineTo(ax + 10, ay - 14); ctx.lineTo(ax, ay); ctx.closePath(); ctx.fill(); ctx.stroke();
   }
@@ -342,6 +356,7 @@ function drawParticles(ctx, layer) {
     else if (layer === 'high') {
       if (p.type === 'smoke') { ctx.fillStyle = `rgba(70,70,75,${a * 0.45})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, 6.28); ctx.fill(); }
       else if (p.type === 'fire') { ctx.fillStyle = a > 0.5 ? `rgba(255,220,90,${a})` : `rgba(255,110,30,${a})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (1.5 + (1 - a)), 0, 6.28); ctx.fill(); }
+      else if (p.type === 'flash') { ctx.fillStyle = `rgba(255,245,180,${a})`; ctx.beginPath(); ctx.arc(p.x, p.y, 7 * a + 2, 0, 6.28); ctx.fill(); }
       else if (p.type === 'spark') { ctx.fillStyle = `rgba(255,230,140,${a})`; ctx.fillRect(p.x, p.y, 2.5, 2.5); }
     }
   }
@@ -370,13 +385,13 @@ export function renderWorld(ctx, markers = []) {
   ctx.globalAlpha = 1;
   drawMarkers(ctx, markers);
   for (const k of G.pickups) if (!k.hide && inView(k.x, k.y)) drawPickup(ctx, k);
-  drawShadows(ctx);
+  drawShadows(ctx, sky.night);
   drawParticles(ctx, 'low');
   for (const p of G.peds) if (p.dead && inView(p.x, p.y)) drawPed(ctx, p);
   for (const p of G.peds) if (!p.dead && inView(p.x, p.y)) drawPed(ctx, p);
   for (const c of G.cars) if (inView(c.x, c.y)) drawCar(ctx, c, sky.night);
-  ctx.lineWidth = 2;
-  for (const t of G.tracers) { ctx.strokeStyle = `rgba(255,240,170,${t.t / 0.07})`; ctx.beginPath(); ctx.moveTo(t.x1, t.y1); ctx.lineTo(t.x2, t.y2); ctx.stroke(); }
+  ctx.lineWidth = 2.5;
+  for (const t of G.tracers) { ctx.strokeStyle = `rgba(255,236,150,${t.t / 0.07})`; ctx.beginPath(); ctx.moveTo(t.x1, t.y1); ctx.lineTo(t.x2, t.y2); ctx.stroke(); }
   drawParticles(ctx, 'high');
   const vis = city.buildings.filter((b) => inView(b.x + b.w / 2, b.y + b.h / 2, b.w / 2 + 260));
   vis.sort((a, b) => a.height - b.height);
@@ -394,7 +409,7 @@ export function renderWorld(ctx, markers = []) {
   if (sky.night > 0.05) {
     ctx.setTransform(z, 0, 0, z, w / 2 - G.cam.x * z + sx, h / 2 - G.cam.y * z + sy);
     ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = sky.night * 0.75;
-    const lamp = glow('rgba(255,200,110,0.55)');
+    const lamp = glow('rgba(255,196,96,0.95)');
     for (const p of city.props) if (p.type === 'lamp' && inView(p.x, p.y)) ctx.drawImage(lamp, p.x - 70, p.y - 70, 140, 140);
     const head = glow('rgba(255,250,215,0.5)');
     for (const c of G.cars) {

@@ -86,10 +86,12 @@ function addBuilding(x0, y0, w, h, height, color, opts = {}) {
   const b = {
     x: x0 * T, y: y0 * T, w: w * T, h: h * T, height, color,
     roof: opts.roof || null, kind: opts.kind || 'block', sign: opts.sign || null,
-    details: [],
+    details: [], neon: null,
   };
+  if ((opts.kind === 'tower' || opts.kind === 'hotel' || opts.kind === 'landmark') && chance(0.55)) b.neon = pick(['#ff3df0', '#3df5ff', '#ff6b3d', '#b45cff']);
   // rooftop clutter: AC boxes, water tanks, helipad, pool
-  if (b.kind === 'tower' && w * h >= 9) b.details.push({ t: 'heli' });
+  if (b.kind === 'tower' && w * h >= 9 && height > 280 && chance(0.4)) b.details.push({ t: 'heli' });
+  if (b.kind === 'tower' && !b.details.length) b.details.push({ t: 'garden', x: rr(0.3, 0.6), y: rr(0.3, 0.6) });
   if (b.kind === 'hotel' && w >= 3 && h >= 3) b.details.push({ t: 'pool', x: rr(0.25, 0.45), y: rr(0.25, 0.45) });
   const n = b.kind === 'house' ? 0 : ri(1, 3);
   for (let i = 0; i < n; i++) b.details.push({ t: chance(0.5) ? 'ac' : 'tank', x: rr(0.15, 0.8), y: rr(0.15, 0.8) });
@@ -123,8 +125,7 @@ function buildBlock(bx, by) {
     const kind = lm.id === 'tower' ? 'tower' : 'landmark';
     const b = addBuilding(x0 + 1, y0, 4, 4, tall, lm.color, { sign: lm.sign, kind });
     b.landmark = lm.id;
-    lm.marker = { x: (bx * 10 + 5) * T + T / 2 - T / 2 + T, y: (by * 10 + 8) * T + T / 2 };
-    lm.marker.x = (bx * 10 + 6) * T; // centred on the plaza in front of the door
+    lm.marker = { x: (bx * 10 + 6) * T, y: (by * 10 + 8) * T + T / 2 }; // plaza in front of the door
     city.landmarks[lm.id] = { ...lm };
     prop('palm', x0 + 0.5, y0 + 5.2); prop('palm', x0 + 5.5, y0 + 5.2);
     if (lm.id === 'mansion') { fillRect(x0 + 1, y0 + 4, 2, 1, TILE.POOL); }

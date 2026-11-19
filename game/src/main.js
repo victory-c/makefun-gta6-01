@@ -263,7 +263,10 @@ function tick(dt) {
 function draw() {
   const markers = G.mode === 'title' ? [] : worldMarkers();
   renderWorld(ctx, markers);
-  if (G.mode === 'title') { drawTitle(ctx, !!titleSave, titleSel); return; }
+  if (G.mode === 'title') {
+    ctx.filter = 'blur(3px) saturate(1.25)'; ctx.drawImage(canvas, 0, 0); ctx.filter = 'none';
+    drawTitle(ctx, !!titleSave, titleSel); return;
+  }
   drawHUD(ctx, markers);
   if (G.mode === 'map') drawFullMap(ctx, markers);
   if (G.mode === 'pause') drawPause(ctx);
@@ -308,9 +311,16 @@ const SHOTS = {
     input.auto = { throttle: 0.55, steer: laneFollow(n.y + 20) };
     return 50;
   },
+  soak() { // not a screenshot: a long automated drive with the police after you, to catch runtime errors
+    startGame(null); G.dialog = null; setWanted(4);
+    const c = makeCar('sports', G.player.x + 30, G.player.y + 100, Math.PI / 2); G.player.car = c; c.driver = G.player;
+    input.auto = { throttle: 1, steer: () => Math.sin(G.t * 0.6) * 0.8 };
+    setTimeout(() => { document.title = JSON.stringify({ t: G.t.toFixed(0), mode: G.mode, cars: G.cars.length, peds: G.peds.length, cops: G.cars.filter((q) => q.type === 'police').length, stars: G.wanted.level, hp: Math.round(G.player.hp), parts: G.particles.length }); }, 0);
+    return 3600;
+  },
   title() {
     resetWorld(5); placePlayer(13 * T, 40 * T); G.player.hidden = true; spawnParked(); spawnInitial();
-    G.clock = 18.1 * 60; G.mode = 'title'; titleSave = null;
+    G.clock = 18.9 * 60; G.mode = 'title'; titleSave = null;
     return 90;
   },
 };

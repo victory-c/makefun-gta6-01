@@ -66,11 +66,15 @@ function pickNext(ai) {
 function blockedAhead(c, range) {
   const fx = Math.cos(c.a), fy = Math.sin(c.a);
   for (const o of G.cars) {
-    if (o === c || o.dead && false) continue;
+    if (o === c) continue;
     const dx = o.x - c.x, dy = o.y - c.y;
     const along = dx * fx + dy * fy;
     if (along <= 0 || along > range) continue;
-    if (Math.abs(-dx * fy + dy * fx) < 18) return o;
+    if (Math.abs(-dx * fy + dy * fx) >= 18) continue;
+    // cross traffic only blocks when it is right in front of the bumper
+    const facing = Math.cos(o.a) * fx + Math.sin(o.a) * fy;
+    if (Math.abs(facing) < 0.5 && along > c.len / 2 + 22) continue;
+    return o;
   }
   for (const p of G.peds) {
     if (p.dead || p.car) continue;
@@ -100,7 +104,10 @@ function updateTraffic(c, dt) {
   const tx = A.x + sx * look, ty = A.y + sy * look;
   let want = ai.angry > 0 ? ai.cruise * 1.6 : ai.cruise;
   if ((1 - t) * L < 90) want = Math.min(want, 110);
-  const block = blockedAhead(c, 75);
+  let block = blockedAhead(c, 75);
+  // impatience: after waiting a while, nose forward anyway (breaks intersection gridlock)
+  if (block && !(block === G.player || block.driver === G.player)) { ai.wait = (ai.wait || 0) + dt; if (ai.wait > 2.5 && ai.wait < 4) block = null; if (ai.wait >= 4) ai.wait = 0; }
+  else if (!block) ai.wait = 0;
   if (block) {
     want = 0;
     if (block === G.player || block.driver === G.player) { if (chance(0.01)) { c.honk = 0.5; sfx('horn', 0.4); } }

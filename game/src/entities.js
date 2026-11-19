@@ -50,7 +50,7 @@ export function makePed(role, x, y, opts = {}) {
 export function puff(x, y, type, n = 1, spd = 60) {
   for (let i = 0; i < n; i++) {
     const a = rand() * 6.28, s = rr(0.2, 1) * spd;
-    const life = type === 'smoke' ? rr(0.8, 1.8) : type === 'fire' ? rr(0.3, 0.7) : rr(0.15, 0.5);
+    const life = type === 'flash' ? 0.06 : type === 'smoke' ? rr(0.8, 1.8) : type === 'fire' ? rr(0.3, 0.7) : rr(0.15, 0.5);
     G.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life, max: life, type, size: type === 'smoke' ? rr(6, 14) : rr(2, 5) });
   }
   if (G.particles.length > 700) G.particles.splice(0, G.particles.length - 700);
@@ -116,6 +116,7 @@ export function driveCar(c, dt, throttle, steer, handbrake = false) {
     if (G.skids.length > 400) G.skids.shift();
     if (chance(0.3)) puff(c.x - fx * c.len * 0.4, c.y - fy * c.len * 0.4, 'smoke', 1, 20);
   }
+  if (throttle > 0.9 && fwd > 20 && fwd < t.max * 0.35 && chance(0.35)) puff(c.x - fx * c.len * 0.45, c.y - fy * c.len * 0.45, 'smoke', 1, 25);
   moveCar(c, dt);
 }
 
@@ -271,6 +272,7 @@ export function fire(shooter, angle) {
     if (hitSomething) break;
   }
   G.tracers.push({ x1: sx, y1: sy, x2: ex, y2: ey, t: 0.07 });
+  G.particles.push({ x: sx, y: sy, vx: 0, vy: 0, life: 0.06, max: 0.06, type: 'flash', size: 6 });
   puff(sx, sy, 'spark', 2, 50);
   if (shooter === G.player) hooks.crime(0.12, sx, sy, 'shots');
   // gunfire scares everyone nearby

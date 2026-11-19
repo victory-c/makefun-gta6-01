@@ -10,7 +10,10 @@ const root = new URL('..', import.meta.url).pathname;
 const chrome = process.env.CHROME || 'google-chrome';
 const PORT = 8099, DBG = 9339;
 const only = process.argv.slice(2);
-const shots = JSON.parse(readFileSync(root + 'shots.json', 'utf8')).filter((s) => !only.length || only.includes(s.name));
+// args: shot names from shots.json, or ad-hoc scenes as name=?query (written to $OUT, default screenshots/)
+const adhoc = only.filter((a) => a.includes('=')).map((a) => ({ name: a.split('=')[0], query: a.slice(a.indexOf('=') + 1) }));
+const shots = adhoc.length ? adhoc : JSON.parse(readFileSync(root + 'shots.json', 'utf8')).filter((s) => !only.length || only.includes(s.name));
+const outDir = process.env.OUT ? process.env.OUT + '/' : root + 'screenshots/';
 
 const server = spawn(process.execPath, [root + 'serve.ts', String(PORT)], { stdio: 'ignore' });
 const browser = spawn(chrome, ['--headless=new', `--remote-debugging-port=${DBG}`, '--window-size=1280,720', '--hide-scrollbars',
@@ -41,19 +44,20 @@ try {
   const send = (method, params = {}) => new Promise((r) => { const i = ++id; waiting.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
   await send('Runtime.enable'); await send('Page.enable');
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 720, deviceScaleFactor: 1, mobile: false });
-  mkdirSync(root + 'screenshots', { recursive: true });
+  mkdirSync(outDir, { recursive: true });
   for (const s of shots) {
     await send('Page.navigate', { url: `http://127.0.0.1:${PORT}/${s.query}` });
     let ok = false;
-    for (let i = 0; i < 100 && !ok; i++) {
+    for (let i = 0; i < 400 && !ok; i++) {
       await sleep(150);
       const r = await send('Runtime.evaluate', { expression: 'window.__shotReady === true', returnByValue: true });
       ok = r.result?.result?.value === true;
     }
     const shot = await send('Page.captureScreenshot', { format: 'jpeg', quality: Number(process.env.Q || 80) });
     const buf = Buffer.from(shot.result.data, 'base64');
-    writeFileSync(root + 'screenshots/' + s.name, buf);
+    writeFileSync(outDir + s.name, buf);
     console.log(`${s.name}: ${ok ? 'ready' : 'TIMEOUT'} ${(buf.length / 1024).toFixed(0)} KiB`);
+    if (process.env.PRINT) console.log((await send('Runtime.evaluate', { expression: 'document.title', returnByValue: true })).result.result.value);
   }
   if (errors.length) console.log('page errors:\n' + [...new Set(errors)].slice(0, 10).join('\n'));
   ws.close();

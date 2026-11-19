@@ -107,16 +107,24 @@ export function drawHUD(ctx, markers) {
   }
   if (pl.car) {
     const mph = Math.round(Math.hypot(pl.car.vx, pl.car.vy) * 0.16);
-    text(ctx, `${mph}`, w - 30, h - 24, 40, '#ffffff', 'right');
-    text(ctx, 'MPH', w - 30 - ctx.measureText(`${mph}`).width - 8, h - 26, 14, '#ffd23f', 'right', '900 ', 3);
-    text(ctx, `${pl.car.t.name}${G.radio ? '  \u266A Sunline FM 104.3' : ''}`, w - 30, h - 112, 16, '#9fe3d0', 'right', 'italic 900 ', 3);
+    panel(ctx, w - 240, h - 128, 220, 112, 0.6);
+    text(ctx, pl.car.t.name.toUpperCase(), w - 226, h - 102, 17, '#ffffff', 'left', 'italic 900 ', 0);
+    if (G.radio) text(ctx, '\u266A SUNLINE FM 104.3', w - 226, h - 80, 13, '#ff9fc4', 'left', '900 ', 0);
+    text(ctx, `${mph}`, w - 64, h - 30, 42, '#ffffff', 'right', '900 ', 0);
+    text(ctx, 'MPH', w - 32, h - 30, 13, '#ffd23f', 'right', '900 ', 0);
     const hp = pl.car.hp / pl.car.maxHp;
-    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(w - 182, h - 100, 154, 8);
-    ctx.fillStyle = hp > 0.5 ? '#9fe3d0' : hp > 0.25 ? '#ffd23f' : '#ff4d4d'; ctx.fillRect(w - 180, h - 98, 150 * clamp(hp, 0, 1), 4);
+    ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(w - 226, h - 70, 80, 6);
+    ctx.fillStyle = hp > 0.5 ? '#9fe3d0' : hp > 0.25 ? '#ffd23f' : '#ff4d4d'; ctx.fillRect(w - 226, h - 70, 80 * clamp(hp, 0, 1), 6);
+    text(ctx, 'BODY', w - 226, h - 48, 11, 'rgba(255,255,255,0.6)', 'left', '900 ', 0);
   }
   // messages
   let my = 40;
-  for (const m of G.msgs) { ctx.globalAlpha = clamp(m.t, 0, 1); text(ctx, m.text, 24, my, 17, m.color, 'left', '700 ', 4); my += 26; }
+  for (const m of G.msgs) {
+    ctx.globalAlpha = clamp(m.t, 0, 1);
+    ctx.font = '700 17px "Arial Black", Impact, sans-serif';
+    panel(ctx, 14, my - 20, ctx.measureText(m.text).width + 22, 28, 0.55);
+    text(ctx, m.text, 25, my, 17, m.color, 'left', '700 ', 0); my += 34;
+  }
   ctx.globalAlpha = 1;
   // objective
   if (G.objective && !G.dialog) {
@@ -146,7 +154,7 @@ export function drawHUD(ctx, markers) {
 
 function drawDialog(ctx) {
   const { w, h } = G.screen, d = G.dialog, [who, line] = d.lines[d.i];
-  const bw = Math.min(860, w - 320), bx = (w - bw) / 2 + 80, by = h - 150;
+  const bw = Math.min(820, w - 540), bx = (w - bw) / 2, by = h - 140;
   panel(ctx, bx, by, bw, 112, 0.78);
   ctx.fillStyle = '#ffd23f'; ctx.fillRect(bx, by, 6, 112);
   text(ctx, who.toUpperCase(), bx + 24, by + 32, 18, who.startsWith('Nina') ? '#9fe3d0' : '#ffd23f', 'left', '900 ', 0);
@@ -212,7 +220,7 @@ export function drawTitle(ctx, hasSave, sel) {
     if (on) { panel(ctx, w / 2 - 150, y - 32, 300, 44, 0.65); }
     text(ctx, (on ? '\u25B6 ' : '') + s, w / 2, y, 28, on ? '#ffd23f' : '#ffffff', 'center', '900 ', 5);
   });
-  CONTROLS.forEach((l, i) => text(ctx, l, w / 2, h - 86 + i * 24, 15, 'rgba(255,255,255,0.85)', 'center', '700 ', 3));
+  text(ctx, 'WASD drive/walk  \u2022  MOUSE aim & shoot  \u2022  F steal car  \u2022  M map  \u2022  ESC pause', w / 2, h - 40, 14, 'rgba(255,255,255,0.8)', 'center', '700 ', 3);
   text(ctx, 'ENTER to start  \u2022  an original game: every city, name and story is made up', w / 2, h - 12, 12, 'rgba(255,255,255,0.6)', 'center', '700 ', 0);
 }
 

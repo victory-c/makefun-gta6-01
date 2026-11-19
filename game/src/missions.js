@@ -89,7 +89,7 @@ export const MISSIONS = [
       say('Got a Pistol (Q/E to switch weapons)', '#ffd23f');
       G.story.data.gang = [];
       for (let k = 0; k < 6; k++) {
-        const g = makePed('gang', 8.2 * T + (k % 2) * 30, 58 * T + k * 34, { weapon: k % 3 === 0 ? 'smg' : 'pistol', hp: 80 });
+        const g = makePed('gang', 7.8 * T + (k % 2) * 60, 56 * T + k * 70, { weapon: k % 3 === 0 ? 'smg' : 'pistol', hp: 80 });
         g.mission = true; g.hostile = false; g.home = { x: g.x, y: g.y }; G.story.data.gang.push(g);
       }
     },
@@ -97,7 +97,7 @@ export const MISSIONS = [
       const left = G.story.data.gang.filter((g) => !g.dead);
       for (const g of left) if (dist(g.x, g.y, G.player.x, G.player.y) < 260) g.hostile = true;
       if (left.length === 0) return 'pass';
-      return { obj: `Take out Los Tiburones on Sunline Beach (${left.length} left)`, targets: left.map((g) => ({ x: g.x, y: g.y, c: '#ff4d6d', label: '' })) };
+      return { obj: `Take out Los Tiburones on Sunline Beach (${left.length} left)`, targets: left.map((g) => ({ x: g.x, y: g.y, c: '#ff4d6d', label: '', ent: true })) };
     },
     outro: [['Tio Ramon', 'The beach is ours again. Crane will send someone. Let him.']],
   },
@@ -139,7 +139,7 @@ export const MISSIONS = [
           G.story.stage = 1; setWanted(4); puff(c.x, c.y, 'smoke', 20, 60);
           G.story.data.bag = { x: c.x - Math.sin(c.a) * 30, y: c.y + Math.cos(c.a) * 30 };
           say('The truck is down! Grab the cash!', '#ffd23f');
-        } else return { obj: 'Ram or shoot the armored truck until it stops', targets: [{ x: c.x, y: c.y, c: '#ff4d6d', label: 'Truck' }], bar: c.hp / c.maxHp };
+        } else return { obj: 'Ram or shoot the armored truck until it stops', targets: [{ x: c.x, y: c.y, c: '#ff4d6d', label: 'Truck', ent: true }], bar: c.hp / c.maxHp };
       }
       if (G.story.stage === 1) {
         if (near(G.player, G.story.data.bag, 30) || (G.player.car && near(G.player.car, G.story.data.bag, 40))) { G.story.stage = 2; sfx('cash'); say('Got the money bags!', '#7CFC9A'); }
